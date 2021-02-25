@@ -2,7 +2,7 @@
 from sklearn.metrics import roc_auc_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
-import sklearn.feature_selection
+from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import f_classif
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import PolynomialFeatures
@@ -119,7 +119,7 @@ def _pca(X):
     return X_pca
 
 
-# Creiranje modela i sracunavanje performansi
+# Kreiranje modela i sracunavanje performansi
 
 def _find_model_performance_naive_bayes(X_train, y_train, X_test, y_test):
     classifier = MultinomialNB()
@@ -157,13 +157,13 @@ def _find_model_performance_k_neighbors(X_train, y_train, X_test, y_test):
     return auc
 
 
-def _print_model_comparison(model_name, auc_processed, auc_unprocessed):
+def _print_model_comparison(model_name, performanse_processed, performanse_unprocessed):
     pprint(
         f"-------------------------- {model_name} -----------------------------------")
-    pprint(f"AUC modela sa preprocesiranjem: {auc_processed}")
-    pprint(f"AUC modela bez preprocesiranja: {auc_unprocessed}")
-    per_improve = ((auc_processed-auc_unprocessed)/auc_unprocessed)*100
-    pprint(f"Poboljsanje modela: {per_improve}%")
+    pprint(f"AUC modela sa preprocesiranjem: {performanse_processed}")
+    pprint(f"AUC modela bez preprocesiranja: {performanse_unprocessed}")
+    performanse_improve = ((performanse_processed-performanse_unprocessed)/performanse_unprocessed)*100
+    pprint(f"Poboljsanje modela: {performanse_improve}%")
     pprint("-------------------------------------------------------------------")
 
 
@@ -250,10 +250,10 @@ if __name__ == "__main__":
     pprint(df.shape)
     pprint(X.shape)
 
-    # Kod velikih datasetova moze doci do overfitting-a i sporog sracunavanja
+    # Kod velikih datasetova moze doci do overfitting-a i sporog sracunavanja, pa je izvrsena selekcija kolona
     # Selekcija K najvaznijih kolona
 
-    select = sklearn.feature_selection.SelectKBest(f_classif,k=16)
+    select = SelectKBest(f_classif,k=16)
     selected_features = select.fit(X_train, y_train)
     indices_selected = selected_features.get_support(indices=True)
     colnames_selected = [X.columns[i] for i in indices_selected]
@@ -271,7 +271,7 @@ if __name__ == "__main__":
 
     y_train = y_train.astype('int')
     y_test = y_test.astype('int')
-    auc_processed = _find_model_performance_tree(
+    performanse_processed = _find_model_performance_tree(
         X_train_selected, y_train, X_test_selected, y_test)
 
     df = df.drop('income', 1)
@@ -301,25 +301,25 @@ if __name__ == "__main__":
 
     y_train = y_train.astype('int')
     y_test = y_test.astype('int')
-    auc_unprocessed = _find_model_performance_tree(
+    performanse_unprocessed = _find_model_performance_tree(
         X_train_unprocessed, y_train, X_test_unprocessed, y_test)
 
-    _print_model_comparison("TREE", auc_processed, auc_unprocessed)
+    _print_model_comparison("TREE", performanse_processed, performanse_unprocessed)
 
     # Performanse naive Bayes
-    auc_processed = _find_model_performance_naive_bayes(
+    performanse_processed = _find_model_performance_naive_bayes(
         X_train_selected, y_train, X_test_selected, y_test)
 
-    auc_unprocessed = _find_model_performance_naive_bayes(
+    performanse_unprocessed = _find_model_performance_naive_bayes(
         X_train_unprocessed, y_train, X_test_unprocessed, y_test)
 
-    _print_model_comparison("BAYES", auc_processed, auc_unprocessed)
+    _print_model_comparison("BAYES", performanse_processed, performanse_unprocessed)
 
     # Performanse K najblizih suseda
-    auc_processed = _find_model_performance_k_neighbors(
+    performanse_processed = _find_model_performance_k_neighbors(
         X_train_selected, y_train, X_test_selected, y_test)
 
-    auc_unprocessed = _find_model_performance_k_neighbors(
+    performanse_unprocessed = _find_model_performance_k_neighbors(
         X_train_unprocessed, y_train, X_test_unprocessed, y_test)
 
-    _print_model_comparison("K NEIGHBORS", auc_processed, auc_unprocessed)
+    _print_model_comparison("K NEIGHBORS", performanse_processed, performanse_unprocessed)
