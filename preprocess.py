@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import f_classif
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import PolynomialFeatures
+from sklearn.preprocessing import PolynomialFeatures, MinMaxScaler
 from itertools import combinations
 import matplotlib.pyplot as plt
 from statsmodels.nonparametric.kde import KDEUnivariate
@@ -16,7 +16,7 @@ import pandas as pd
 import numpy as np
 from pprint import pprint
 from csv import reader
-from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import MultinomialNB, GaussianNB
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 
@@ -54,7 +54,6 @@ def _replace_low_frequency_countries_with_other(X):
     X['native_country'] = ['United-States ' if x ==
                            'United-States' else 'Other' for x in X['native_country']]
     return X
-
 
 
 def _dummy_dataframe(df, todummy_list):
@@ -126,7 +125,14 @@ def _find_model_performance_naive_bayes(X_train, y_train, X_test, y_test):
     classifier.fit(X_train, y_train)
     y_hat = [x[1] for x in classifier.predict_proba(X_test)]
     auc = roc_auc_score(y_test, y_hat)
+    return auc
 
+
+def _find_model_performance_naive_bayes_gaussian(X_train, y_train, X_test, y_test):
+    classifier = GaussianNB()
+    classifier.fit(X_train, y_train)
+    y_hat = [x[1] for x in classifier.predict_proba(X_test)]
+    auc = roc_auc_score(y_test, y_hat)
     return auc
 
 
@@ -162,7 +168,8 @@ def _print_model_comparison(model_name, performanse_processed, performanse_unpro
         f"-------------------------- {model_name} -----------------------------------")
     pprint(f"AUC modela sa preprocesiranjem: {performanse_processed}")
     pprint(f"AUC modela bez preprocesiranja: {performanse_unprocessed}")
-    performanse_improve = ((performanse_processed-performanse_unprocessed)/performanse_unprocessed)*100
+    performanse_improve = (
+        (performanse_processed-performanse_unprocessed)/performanse_unprocessed)*100
     pprint(f"Poboljsanje modela: {performanse_improve}%")
     pprint("-------------------------------------------------------------------")
 
@@ -175,7 +182,8 @@ if __name__ == "__main__":
     pprint("Income column value count:")
     pprint(df['income'].value_counts())
 
-    # Podela DataFrame-a na dataframe sa atributima (karakteristikama) i na kolonu sa vrednostima atributa income, za koji vrsimo predikciju
+    # Podela DataFrame-a na dataframe sa atributima (karakteristikama) i
+    # na kolonu sa vrednostima atributa income, za koji vrsimo predikciju
     X, y = _divide_dataframe_into_features_and_outcome(df)
     # Zamena vrednosti y-a sa 0 i 1
     y = _replace_outcome_values(y)
@@ -211,18 +219,16 @@ if __name__ == "__main__":
     # Zamena nedostajucih vrednosti srednjom vrednoscu
     X = _impute_missing_values(X)
 
-
     # Detekcija outlier-a
     tukey_indices, tukey_values = _find_outliers_tukey(X['age'])
     pprint("Outliers tukey")
     pprint(np.sort(tukey_values))
 
-
     # Prikaz outlier-a na chart-u
-    tmp=X['age']
-    plt.scatter(x=tmp, y=[0] * len(tmp),c="blue")
-    plt.scatter(x=tukey_values, y=[0] * len(tukey_values),c="red")
-    plt.ylim(0,0)
+    tmp = X['age']
+    plt.scatter(x=tmp, y=[0] * len(tmp), c="blue")
+    plt.scatter(x=tukey_values, y=[0] * len(tukey_values), c="red")
+    plt.ylim(0, 0)
     plt.show()
 
     #_plot_histogram(X['age'], y)
@@ -234,14 +240,13 @@ if __name__ == "__main__":
     pprint(X.head(5))
 
     # PCA za redukciju dimenzionalnosti, ubaceno samo kao razlog zbog cega sam koristila selectKBest
-    # PCA mi je voma nerazumljiv za citanje
+    # PCA mi je veoma nerazumljiv za citanje
     X_pca = _pca(X)
 
     pprint("PCA")
     pprint(X_pca)
 
     # Podela na train i test skupove
-
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, train_size=0.9, random_state=1)
 
@@ -253,7 +258,7 @@ if __name__ == "__main__":
     # Kod velikih datasetova moze doci do overfitting-a i sporog sracunavanja, pa je izvrsena selekcija kolona
     # Selekcija K najvaznijih kolona
 
-    select = SelectKBest(f_classif,k=16)
+    select = SelectKBest(f_classif, k=16)
     selected_features = select.fit(X_train, y_train)
     indices_selected = selected_features.get_support(indices=True)
     colnames_selected = [X.columns[i] for i in indices_selected]
@@ -265,7 +270,6 @@ if __name__ == "__main__":
     pprint(colnames_selected)
 
     X_train_selected.to_csv("./X_train_selected.csv", index=False, header=True)
-
 
     # Performanse Tree
 
@@ -304,7 +308,8 @@ if __name__ == "__main__":
     performanse_unprocessed = _find_model_performance_tree(
         X_train_unprocessed, y_train, X_test_unprocessed, y_test)
 
-    _print_model_comparison("TREE", performanse_processed, performanse_unprocessed)
+    _print_model_comparison(
+        "TREE", performanse_processed, performanse_unprocessed)
 
     # Performanse naive Bayes
     performanse_processed = _find_model_performance_naive_bayes(
@@ -313,7 +318,18 @@ if __name__ == "__main__":
     performanse_unprocessed = _find_model_performance_naive_bayes(
         X_train_unprocessed, y_train, X_test_unprocessed, y_test)
 
-    _print_model_comparison("BAYES", performanse_processed, performanse_unprocessed)
+    _print_model_comparison(
+        "BAYES Multinominal", performanse_processed, performanse_unprocessed)
+
+    # Performanse naive Bayes Gaussian
+    performanse_processed = _find_model_performance_naive_bayes_gaussian(
+        X_train_selected, y_train, X_test_selected, y_test)
+
+    performanse_unprocessed = _find_model_performance_naive_bayes_gaussian(
+        X_train_unprocessed, y_train, X_test_unprocessed, y_test)
+
+    _print_model_comparison(
+        "BAYES GAUSSIAN", performanse_processed, performanse_unprocessed)
 
     # Performanse K najblizih suseda
     performanse_processed = _find_model_performance_k_neighbors(
@@ -322,4 +338,110 @@ if __name__ == "__main__":
     performanse_unprocessed = _find_model_performance_k_neighbors(
         X_train_unprocessed, y_train, X_test_unprocessed, y_test)
 
-    _print_model_comparison("K NEIGHBORS", performanse_processed, performanse_unprocessed)
+    _print_model_comparison(
+        "K NEIGHBORS", performanse_processed, performanse_unprocessed)
+
+    # -------------------- PCA -------------------------
+
+    # Podela na train i test skupove
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_pca, y, train_size=0.9, random_state=1)
+
+    # Promena broja kolona nakon dummy metode i dodavanja interakcija
+    #pprint("Promena broja kolona pre i nakon dodavanja interakcija i primenjivanja dummy metode:")
+    # pprint(df.shape)
+    # pprint(X_pca.shape)
+
+    # Kod velikih datasetova moze doci do overfitting-a i sporog sracunavanja, pa je izvrsena selekcija kolona
+    # Selekcija K najvaznijih kolona
+
+    select = SelectKBest(f_classif, k='all')
+    selected_features = select.fit(X_train, y_train)
+    indices_selected = selected_features.get_support(indices=True)
+    colnames_selected = [X_pca.columns[i] for i in indices_selected]
+
+    X_train_selected = X_train[colnames_selected]
+    X_test_selected = X_test[colnames_selected]
+
+    #pprint(f"Selected columns: {len(colnames_selected)}")
+    # pprint(colnames_selected)
+
+    X_train_selected.to_csv("./X_train_selected.csv", index=False, header=True)
+
+    # Performanse Tree
+
+    y_train = y_train.astype('int')
+    y_test = y_test.astype('int')
+    performanse_processed = _find_model_performance_tree(
+        X_train_selected, y_train, X_test_selected, y_test)
+
+    df = df.drop('income', 1)
+    df["income"] = y
+    # IZBACIVANJE NEDOSTAJUĆIH VREDNOSTI iz neprocesiranog dataframe-a
+    df_unprocessed = df
+    df_unprocessed = df_unprocessed.dropna(axis=0, how='any')
+    # pprint(df.shape)
+   # pprint(df_unprocessed.shape)
+
+    # Izbacivanje nenumerickih atributa
+    for col_name in df_unprocessed.columns:
+        if df_unprocessed[col_name].dtypes not in ['int32', 'int64', 'float32', 'float64']:
+            df_unprocessed = df_unprocessed.drop(col_name, 1)
+
+    df_unprocessed['income'] = y
+    # Podela na skup karakteristika i ciljnih atributa
+    X_unprocessed = df_unprocessed.drop('income', 1)
+    y_unprocessed = df_unprocessed.income
+
+    # Kako neprocesirani podaci izgledaju
+    # pprint(X_unprocessed.head(5))
+
+    # Podela na train i test akupove
+    X_train_unprocessed, X_test_unprocessed, y_train, y_test = train_test_split(
+        X_unprocessed, y_unprocessed, train_size=0.9, random_state=1)
+
+    y_train = y_train.astype('int')
+    y_test = y_test.astype('int')
+    performanse_unprocessed = _find_model_performance_tree(
+        X_train_unprocessed, y_train, X_test_unprocessed, y_test)
+
+    _print_model_comparison(
+        "TREE PCA", performanse_processed, performanse_unprocessed)
+
+    # Performanse naive Bayes sa normalizacijom podataka zbog negativnih vrednosti
+    min_max_scaler = MinMaxScaler()
+    X_train_selected_minmax = min_max_scaler.fit_transform(X_train_selected)
+    X_test_selected_minmax = min_max_scaler.transform(X_test_selected)
+
+    performanse_processed = _find_model_performance_naive_bayes(
+        X_train_selected_minmax, y_train, X_test_selected_minmax, y_test)
+
+    X_train_unprocessed_minmax = min_max_scaler.fit_transform(
+        X_train_unprocessed)
+    X_test_unprocessed_minmax = min_max_scaler.transform(X_test_unprocessed)
+
+    performanse_unprocessed = _find_model_performance_naive_bayes(
+        X_train_unprocessed_minmax, y_train, X_test_unprocessed_minmax, y_test)
+
+    _print_model_comparison("BAYES Multinominal PCA",
+                            performanse_processed, performanse_unprocessed)
+
+    # Performanse naive Bayes Gaussian
+    performanse_processed = _find_model_performance_naive_bayes_gaussian(
+        X_train_selected, y_train, X_test_selected, y_test)
+
+    performanse_unprocessed = _find_model_performance_naive_bayes_gaussian(
+        X_train_unprocessed, y_train, X_test_unprocessed, y_test)
+
+    _print_model_comparison("BAYES GAUSSIAN PCA",
+                            performanse_processed, performanse_unprocessed)
+
+    # Performanse K najblizih suseda
+    performanse_processed = _find_model_performance_k_neighbors(
+        X_train_selected, y_train, X_test_selected, y_test)
+
+    performanse_unprocessed = _find_model_performance_k_neighbors(
+        X_train_unprocessed, y_train, X_test_unprocessed, y_test)
+
+    _print_model_comparison(
+        "K NEIGHBORS PCA", performanse_processed, performanse_unprocessed)
