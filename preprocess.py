@@ -16,7 +16,7 @@ import pandas as pd
 import numpy as np
 from pprint import pprint
 from csv import reader
-from sklearn.naive_bayes import MultinomialNB, GaussianNB
+from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 
@@ -125,23 +125,6 @@ def _find_model_performance_naive_bayes(X_train, y_train, X_test, y_test):
     classifier.fit(X_train, y_train)
     y_hat = [x[1] for x in classifier.predict_proba(X_test)]
     auc = roc_auc_score(y_test, y_hat)
-    return auc
-
-
-def _find_model_performance_naive_bayes_gaussian(X_train, y_train, X_test, y_test):
-    classifier = GaussianNB()
-    classifier.fit(X_train, y_train)
-    y_hat = [x[1] for x in classifier.predict_proba(X_test)]
-    auc = roc_auc_score(y_test, y_hat)
-    return auc
-
-
-def _find_model_performance_svm(X_train, y_train, X_test, y_test):
-    classifier = SVC()
-    classifier.fit(X_train, y_train)
-    y_hat = [x[1] for x in classifier.predict_proba(X_test)]
-    auc = roc_auc_score(y_test, y_hat)
-
     return auc
 
 
@@ -321,16 +304,6 @@ if __name__ == "__main__":
     _print_model_comparison(
         "BAYES Multinominal", performanse_processed, performanse_unprocessed)
 
-    # Performanse naive Bayes Gaussian
-    performanse_processed = _find_model_performance_naive_bayes_gaussian(
-        X_train_selected, y_train, X_test_selected, y_test)
-
-    performanse_unprocessed = _find_model_performance_naive_bayes_gaussian(
-        X_train_unprocessed, y_train, X_test_unprocessed, y_test)
-
-    _print_model_comparison(
-        "BAYES GAUSSIAN", performanse_processed, performanse_unprocessed)
-
     # Performanse K najblizih suseda
     performanse_processed = _find_model_performance_k_neighbors(
         X_train_selected, y_train, X_test_selected, y_test)
@@ -347,24 +320,8 @@ if __name__ == "__main__":
     X_train, X_test, y_train, y_test = train_test_split(
         X_pca, y, train_size=0.9, random_state=1)
 
-    # Promena broja kolona nakon dummy metode i dodavanja interakcija
-    #pprint("Promena broja kolona pre i nakon dodavanja interakcija i primenjivanja dummy metode:")
-    # pprint(df.shape)
-    # pprint(X_pca.shape)
-
-    # Kod velikih datasetova moze doci do overfitting-a i sporog sracunavanja, pa je izvrsena selekcija kolona
-    # Selekcija K najvaznijih kolona
-
-    select = SelectKBest(f_classif, k='all')
-    selected_features = select.fit(X_train, y_train)
-    indices_selected = selected_features.get_support(indices=True)
-    colnames_selected = [X_pca.columns[i] for i in indices_selected]
-
-    X_train_selected = X_train[colnames_selected]
-    X_test_selected = X_test[colnames_selected]
-
-    #pprint(f"Selected columns: {len(colnames_selected)}")
-    # pprint(colnames_selected)
+    X_train_selected = X_train
+    X_test_selected = X_test
 
     X_train_selected.to_csv("./X_train_selected.csv", index=False, header=True)
 
@@ -424,16 +381,6 @@ if __name__ == "__main__":
         X_train_unprocessed_minmax, y_train, X_test_unprocessed_minmax, y_test)
 
     _print_model_comparison("BAYES Multinominal PCA",
-                            performanse_processed, performanse_unprocessed)
-
-    # Performanse naive Bayes Gaussian
-    performanse_processed = _find_model_performance_naive_bayes_gaussian(
-        X_train_selected, y_train, X_test_selected, y_test)
-
-    performanse_unprocessed = _find_model_performance_naive_bayes_gaussian(
-        X_train_unprocessed, y_train, X_test_unprocessed, y_test)
-
-    _print_model_comparison("BAYES GAUSSIAN PCA",
                             performanse_processed, performanse_unprocessed)
 
     # Performanse K najblizih suseda
